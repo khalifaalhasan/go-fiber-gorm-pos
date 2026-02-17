@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: pos_postgres_local
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pos_db_data:/var/lib/postgresql/data
+    # Tambahkan blok deploy ini untuk melimit resource
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5" # Maksimal pakai setengah core CPU laptop
+          memory: 512M # Maksimal RAM 512 MB (sudah sangat sisa buat lokal)
+        reservations:
+          memory: 128M # Garansi RAM minimal yang disediakan
+
+  # (Biarkan service app_server jika ada)
+
+volumes:
+  pos_db_data:

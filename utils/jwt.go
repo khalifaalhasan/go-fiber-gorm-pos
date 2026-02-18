@@ -8,22 +8,26 @@ import (
 	"github.com/google/uuid"
 )
 
-
+// JwtCustomClaims: store_id RESMI DIHAPUS. 
+// (Typo kurang tanda kutip tutup di json tag juga sudah diperbaiki)
 type JwtCustomClaims struct {
-	UserID uuid.UUID `json:"user_id`
-	StoreID uuid.UUID `json:"store_id`
-	Role string `json:"role"`
+	UserID uuid.UUID `json:"user_id"`
+	Role   string    `json:"role"`
 	jwt.RegisteredClaims
-
 }
 
+// GenerateToken: Parameter storeID dihapus
+func GenerateToken(userID uuid.UUID, role string) (string, error) {
+	secretStr := os.Getenv("JWT_SECRET")
+	if secretStr == "" {
+		// Fallback biar nggak panic kalau lupa set .env
+		secretStr = "supersecretkey_ganti_nanti_di_env" 
+	}
+	secret := []byte(secretStr)
 
-func GenerateToken(userID, storeID uuid.UUID, role string)(string, error) {
-	secret := []byte(os.Getenv("JWT_SECRET"))
 	claims := &JwtCustomClaims{
-		UserID : userID,
-		StoreID: storeID,
-		Role: role,
+		UserID: userID,
+		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
 		},

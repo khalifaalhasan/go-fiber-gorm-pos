@@ -1,9 +1,10 @@
 package main
 
 import (
-	"os"
 	"go-fiber-pos/config"
+	"go-fiber-pos/routes" // Import package routes yang baru dibuat
 	"go-fiber-pos/utils"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -12,8 +13,9 @@ import (
 )
 
 func main() {
-	// 1. Inisialisasi Logger Custom
+	// 1. Inisialisasi Logger Custom & Validator
 	utils.InitLogger()
+	utils.InitValidator()
 
 	// 2. Load .env
 	err := godotenv.Load()
@@ -29,18 +31,14 @@ func main() {
 		AppName: "Bangga Punya Web - POS API",
 	})
 
-	// Middleware bawaan Fiber untuk log request dan anti-crash (recover)
+	// Middleware bawaan Fiber untuk log request dan anti-crash
 	app.Use(logger.New())
 	app.Use(recover.New())
 
-	// Route Test Ping
-	app.Get("/ping", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"message": "pong! Server Fiber berjalan secepat kilat 🚀",
-		})
-	})
+	// 5. Panggil Setup Routes (Magic-nya ada di sini)
+	routes.SetupRoutes(app)
 
-	// 5. Jalankan Server
+	// 6. Jalankan Server
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

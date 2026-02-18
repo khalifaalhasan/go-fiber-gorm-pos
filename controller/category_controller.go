@@ -2,8 +2,8 @@ package controller
 
 import (
 	"go-fiber-pos/model"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 )
 
 type CategoryController struct {
@@ -15,39 +15,30 @@ func NewCategoryController(service model.CategoryService) *CategoryController {
 }
 
 func (ctrl *CategoryController) Create(c *fiber.Ctx) error {
-	// Ambil store_id dari token JWT (Hasil kerja Middleware)
-	storeIDContext := c.Locals("store_id").(uuid.UUID)
-
 	var req model.CreateCategoryRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format JSON tidak valid"})
-	}
-
-	// res
-	category, err := ctrl.service.CreateCategory(storeIDContext, req)
-	if err != nil {
+	if err := c.BodyParser(&req); err != nil{
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Bungkus pakai kardus DTO
-	res := model.ToCategoryResponse(category)
+	category, err := ctrl.service.CreateCategory(req)
+	if err != nil{
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"data": category,
 		"message": "Kategori berhasil dibuat",
-		"data":    res,
 	})
 }
 
-func (ctrl *CategoryController) GetAll(c *fiber.Ctx) error {
-	storeIDContext := c.Locals("store_id").(uuid.UUID)
 
-	// res
-	categories, err := ctrl.service.GetCategoriesByStore(storeIDContext)
+func (ctrl *CategoryController) GetAll(c *fiber.Ctx) error {
+	// Panggil service (Bersih tanpa storeIDContext)
+	categories, err := ctrl.service.GetAllCategories()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal mengambil data"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Bungkus array-nya pakai kardus DTO
 	res := model.ToCategoryResponseList(categories)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{

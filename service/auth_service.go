@@ -34,41 +34,35 @@ func (s *authService) Register(req model.RegisterRequest) error {
 		return errors.New("gagal memproses password")
 	}
 
-	// 4. Siapkan Entity Store & User
-	store := &model.Store{
-		Name:      req.StoreName,
-		Subdomain: req.Subdomain,
-	}
-
+	// 4. Siapkan Entity User (Store Resmi Dihapus karena Single-Tenant)
 	user := &model.User{
 		Name:         req.Name,
 		Username:     req.Username,
 		PasswordHash: string(hashedPassword),
-		Role:         "ADMIN", // Orang yang daftar pertama otomatis jadi Admin Kafe
+		Role:         "ADMIN", // Otomatis jadi Admin sistem
 	}
 
-	// 5. Lempar ke Repository
-	return s.repo.CreateStoreAndUser(store, user)
+	// 5. Lempar ke Repository (Panggil method CreateUser yang baru)
+	return s.repo.CreateUser(user)
 }
 
 func (s *authService) Login(req model.LoginRequest) (string, error) {
 	// 1. Cari user
 	user, err := s.repo.FindByUsername(req.Username)
 	if err != nil {
-		// Security Best Practice: Jangan pernah kasih tahu apakah 'username' yang salah atau 'password' yang salah.
-		return "", errors.New("username atau password salah") 
-	}
-
-	// 2. Cocokkan Password Asli dengan Hash di DB
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
-	if err != nil {
+		// Security Best Practice: Jangan pernah kasih tahu apakah 'username' atau 'password' yang salah.
 		return "", errors.New("username atau password salah")
 	}
 
-	// 3. Buat JWT Token pakai fungsi yang kita buat sebelumnya
-	token, err := utils.GenerateToken(user.ID, user.StoreID, user.Role)
+	// 2. Cocokkan Password Asli dengan Hash di DB
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		return "", errors.New("username atau password salah")
+	}
+
+	// 3. Generate JWT Token menggunakan utils
+	token, err := utils.GenerateToken(user.ID, user.Role)
 	if err != nil {
-		return "", errors.New("gagal membuat sesi token")
+		return "", errors.New("gagal membuat token autentikasi")
 	}
 
 	return token, nil

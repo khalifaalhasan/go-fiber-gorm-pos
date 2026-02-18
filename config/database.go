@@ -31,7 +31,7 @@ func ConnectDatabase() {
 	utils.Log.Info("Berhasil terhubung ke database PostgreSQL via GORM!")
 
 	err = database.AutoMigrate(
-		&model.Store{},
+		&model.StoreProfile{},
 		&model.User{},
 		&model.Category{},
 		&model.Product{},

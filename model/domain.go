@@ -4,36 +4,36 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 	"gorm.io/gorm"
 )
 
 // ==========================================
-// CORE & TENANT
+// APP CONFIGURATION (Hanya 1 Baris Data Nanti)
 // ==========================================
 
-type Store struct {
-	ID         uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	Name       string         `gorm:"type:varchar(255);not null" json:"name"`
-	Subdomain  string         `gorm:"type:varchar(255);unique;not null" json:"subdomain"`
-	Address    string         `gorm:"type:text" json:"address"`
-	MarkupFee  int            `gorm:"default:0" json:"markup_fee"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"` // Disembunyikan dari response JSON API
+
+
+// StoreProfile menggantikan Store. Dipakai untuk header struk kasir/UI.
+type StoreProfile struct {
+	ID        uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
+	Name      string         `gorm:"type:varchar(255);not null" json:"name"`
+	Address   string         `gorm:"type:text" json:"address"`
+	Phone     string         `gorm:"type:varchar(20)" json:"phone"`
+	MarkupFee int            `gorm:"default:0" json:"markup_fee"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
 }
 
 type User struct {
 	ID           uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	StoreID      uuid.UUID      `gorm:"type:uuid;not null" json:"store_id"`
 	Name         string         `gorm:"type:varchar(255);not null" json:"name"`
 	Username     string         `gorm:"type:varchar(255);unique;not null" json:"username"`
-	PasswordHash string         `gorm:"type:varchar(255);not null" json:"-"` // Jangan pernah di-return ke JSON
+	PasswordHash string         `gorm:"type:varchar(255);not null" json:"-"`
 	Role         string         `gorm:"type:varchar(50);default:'CASHIER'" json:"role"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
-
-	Store Store `gorm:"foreignKey:StoreID" json:"-"` // Relasi
 }
 
 // ==========================================
@@ -42,20 +42,18 @@ type User struct {
 
 type Category struct {
 	ID        uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	StoreID   uuid.UUID      `gorm:"type:uuid;not null;uniqueIndex:idx_store_name" json:"store_id"`
-	Name      string         `gorm:"type:varchar(255);not null" json:"name"`
+	Name      string         `gorm:"type:varchar(255);unique;not null" json:"name"` // Langsung unique global
+	Slug 	  string 		 `gorm:"type:varchar(255);unique;index" json:"slug"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
-
-	Store Store `gorm:"foreignKey:StoreID" json:"-"`
 }
 
 type Product struct {
 	ID             uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	StoreID        uuid.UUID      `gorm:"type:uuid;not null" json:"store_id"`
 	CategoryID     uuid.UUID      `gorm:"type:uuid;not null" json:"category_id"`
-	Name           string         `gorm:"type:varchar(255);not null" json:"name"`
+	Name           string         `gorm:"type:varchar(255);not null" json:"name"` // Bisa ditambah unique kalau mau
+	Slug           string         `gorm:"type:varchar(255);index" json:"slug"` // Bisa ditambah unique kalau mau
 	Description    string         `gorm:"type:text" json:"description"`
 	ImageURL       string         `gorm:"type:varchar(255)" json:"image_url"`
 	NormalPrice    int            `gorm:"not null" json:"normal_price"`
@@ -68,17 +66,15 @@ type Product struct {
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
 
-	Store    Store    `gorm:"foreignKey:StoreID" json:"-"`
 	Category *Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
 }
 
 // ==========================================
-// FUTURE SCALE-UP: VOUCHERS
+// VOUCHERS
 // ==========================================
 
 type Voucher struct {
 	ID                uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	StoreID           *uuid.UUID `gorm:"type:uuid" json:"store_id"` // Pointer (*) karena bisa NULL (Voucher Global)
 	Code              string    `gorm:"type:varchar(50);unique;not null" json:"code"`
 	DiscountType      string    `gorm:"type:varchar(50);not null" json:"discount_type"` // PERCENTAGE / FIXED
 	DiscountValue     int       `gorm:"not null" json:"discount_value"`
@@ -87,8 +83,6 @@ type Voucher struct {
 	ValidUntil        time.Time `json:"valid_until"`
 	IsActive          bool      `gorm:"default:true" json:"is_active"`
 	CreatedAt         time.Time `json:"created_at"`
-
-	Store Store `gorm:"foreignKey:StoreID" json:"-"`
 }
 
 // ==========================================
@@ -97,7 +91,6 @@ type Voucher struct {
 
 type Order struct {
 	ID               uuid.UUID  `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	StoreID          uuid.UUID  `gorm:"type:uuid;not null" json:"store_id"`
 	VoucherID        *uuid.UUID `gorm:"type:uuid" json:"voucher_id"` // Pointer karena opsional
 	TableNumber      *string    `gorm:"type:varchar(50)" json:"table_number"`
 	OrderStatus      string     `gorm:"type:varchar(50);default:'PENDING'" json:"order_status"`
@@ -109,12 +102,12 @@ type Order struct {
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
 
-	Store    Store       `gorm:"foreignKey:StoreID" json:"-"`
-	Voucher  Voucher     `gorm:"foreignKey:VoucherID" json:"-"`
-	Items    []OrderItem `gorm:"foreignKey:OrderID" json:"items"`    // Has Many
-	Payments []Payment   `gorm:"foreignKey:OrderID" json:"payments"` // Has Many
+	Voucher  *Voucher    `gorm:"foreignKey:VoucherID" json:"voucher,omitempty"` // Perbaikan: pointer biar aman kalau nil
+	Items    []OrderItem `gorm:"foreignKey:OrderID" json:"items"`    
+	Payments []Payment   `gorm:"foreignKey:OrderID" json:"payments"` 
 }
 
+// (OrderItem dan Payment tetap sama seperti kodemu sebelumnya)
 type OrderItem struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	OrderID   uuid.UUID `gorm:"type:uuid;not null" json:"order_id"`
@@ -131,10 +124,21 @@ type OrderItem struct {
 type Payment struct {
 	ID                    uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	OrderID               uuid.UUID `gorm:"type:uuid;not null" json:"order_id"`
-	PaymentMethod         string    `gorm:"type:varchar(50);not null" json:"payment_method"` // CASH, MIDTRANS_QRIS
+	PaymentMethod         string    `gorm:"type:varchar(50);not null" json:"payment_method"` 
 	MidtransTransactionID *string   `gorm:"type:varchar(255)" json:"midtrans_transaction_id"`
 	AmountPaid            int       `gorm:"not null" json:"amount_paid"`
-	PaymentStatus         string    `gorm:"type:varchar(50);not null" json:"payment_status"` // SUCCESS, PENDING
+	PaymentStatus         string    `gorm:"type:varchar(50);not null" json:"payment_status"` 
 	PaidAt                time.Time `json:"paid_at"`
 	CreatedAt             time.Time `json:"created_at"`
+}
+
+func (c *Category) BeforeSave(tx *gorm.DB) (err error) {
+    // 3. Pastikan memanggil slug.Make (package.Fungsi)
+    c.Slug = slug.Make(c.Name)
+    return
+}
+
+func (p *Product) BeforeSave(tx *gorm.DB) (err error) {
+    p.Slug = slug.Make(p.Name)
+    return
 }

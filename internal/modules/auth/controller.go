@@ -1,21 +1,19 @@
 package auth
 
 import (
-	model "go-fiber-pos/internal/core"
-
 	"github.com/gofiber/fiber/v2"
 )
 
 type AuthController struct {
-	service model.AuthService
+	service AuthService
 }
 
-func NewAuthController(service model.AuthService) *AuthController {
+func NewAuthController(service AuthService) *AuthController {
 	return &AuthController{service: service}
 }
 
 func (ctrl *AuthController) Register(c *fiber.Ctx) error {
-	var req model.RegisterRequest
+	var req RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format JSON tidak valid"})
 	}
@@ -30,7 +28,7 @@ func (ctrl *AuthController) Register(c *fiber.Ctx) error {
 }
 
 func (ctrl *AuthController) Login(c *fiber.Ctx) error {
-	var req model.LoginRequest
+	var req LoginRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format JSON tidak valid"})
 	}

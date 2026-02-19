@@ -3,7 +3,8 @@ package config
 import (
 	"fmt"
 	"go-fiber-pos/internal/core"
-	"go-fiber-pos/utils"
+	"go-fiber-pos/pkg/logger"
+
 	"os"
 
 	"gorm.io/driver/postgres"
@@ -24,11 +25,11 @@ func ConnectDatabase() {
 
 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		utils.Log.Fatalf("Gagal terhubung ke database: %v", err)
+		logger.Log.Fatalf("Gagal terhubung ke database: %v", err)
 	}
 
 	DB = database
-	utils.Log.Info("Berhasil terhubung ke database PostgreSQL via GORM!")
+	logger.Log.Info("Berhasil terhubung ke database PostgreSQL via GORM!")
 
 	err = database.AutoMigrate(
 		&core.StoreProfile{},
@@ -42,10 +43,10 @@ func ConnectDatabase() {
 	)
 
 	if err != nil {
-		utils.Log.Fatalf("Gagal melakukan migrasi database: %v", err)
+		logger.Log.Fatalf("Gagal melakukan migrasi database: %v", err)
 	}
 	
-	utils.Log.Info("Migrasi database berhasil! Tabel sudah siap digunakan.")
+	logger.Log.Info("Migrasi database berhasil! Tabel sudah siap digunakan.")
 	// ----------------------------------------------
 
 	DB = database

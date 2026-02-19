@@ -4,25 +4,27 @@ import (
 	"go-fiber-pos/internal/config"
 	"go-fiber-pos/internal/routes" // Import package routes yang baru dibuat
 	"go-fiber-pos/pkg/validator"
+	"go-fiber-pos/pkg/logger"
 
-	"go-fiber-pos/utils"
+
+
 	"os"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	fiberlog "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
 )
 
 func main() {
 	// 1. Inisialisasi Logger Custom & Validator
-	utils.InitLogger()
+	logger.InitLogger()
 	validator.InitValidator()
 
 	// 2. Load .env
 	err := godotenv.Load()
 	if err != nil {
-		utils.Log.Warn("File .env tidak ditemukan, menggunakan variabel OS")
+		logger.Log.Warn("File .env tidak ditemukan, menggunakan variabel OS")
 	}
 
 	// 3. Konek GORM ke Database
@@ -34,7 +36,7 @@ func main() {
 	})
 
 	// Middleware bawaan Fiber untuk log request dan anti-crash
-	app.Use(logger.New())
+	app.Use(fiberlog.New())
 	app.Use(recover.New())
 
 	// 5. Panggil Setup Routes (Magic-nya ada di sini)
@@ -46,9 +48,9 @@ func main() {
 		port = "8080"
 	}
 	
-	utils.Log.Infof("Starting server on port %s", port)
+	logger.Log.Infof("Starting server on port %s", port)
 	err = app.Listen(":" + port)
 	if err != nil {
-		utils.Log.Fatalf("Error starting server: %v", err)
+		logger.Log.Fatalf("Error starting server: %v", err)
 	}
 }

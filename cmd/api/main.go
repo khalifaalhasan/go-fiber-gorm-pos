@@ -35,11 +35,10 @@ func main() {
 		AppName: "Bangga Punya Web - POS API",
 	})
 
-	// Middleware bawaan Fiber untuk log request dan anti-crash
 	app.Use(fiberlog.New())
 	app.Use(recover.New())
 
-	// 5. Panggil Setup Routes (Magic-nya ada di sini)
+	// 5. Panggil Setup Routes 
 	routes.SetupRoutes(app)
 
 	// 6. Jalankan Server

@@ -10,14 +10,14 @@ import (
 )
 
 type categoryService struct {
-	repo core.CategoryRepository
+	repo CategoryRepository
 }
 
-func NewCategoryService(repo core.CategoryRepository) core.CategoryService {
+func NewCategoryService(repo CategoryRepository) CategoryService {
 	return &categoryService{repo: repo}
 }
 
-func (s *categoryService) CreateCategory(req core.CreateCategoryRequest) (*core.Category, error) {
+func (s *categoryService) CreateCategory(req CreateCategoryRequest) (*core.Category, error) {
 	// 1. Validasi Input
 	if err := validator.Validate.Struct(req); err != nil {
 		return nil, errors.New("validasi gagal: " + err.Error())

@@ -32,12 +32,14 @@ func (ctrl *ProductController) Create(c *fiber.Ctx) error {
 
 func (ctrl *ProductController) GetAll(c *fiber.Ctx) error {
 	
-	categories, err := ctrl.service.GetAllProducts()
+	products, err := ctrl.service.GetAllProducts()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal mengambil data"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	res := ToProductResponseList(products)
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"data": categories,
+		"data": res,
 	})
 }

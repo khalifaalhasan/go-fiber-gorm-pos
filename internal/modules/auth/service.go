@@ -11,14 +11,14 @@ import (
 )
 
 type authService struct {
-	repo core.AuthRepository
+	repo AuthRepository
 }
 
-func NewAuthService(repo core.AuthRepository) core.AuthService {
+func NewAuthService(repo AuthRepository) AuthService {
 	return &authService{repo: repo}
 }
 
-func (s *authService) Register(req core.RegisterRequest) error {
+func (s *authService) Register(req RegisterRequest) error {
 	// 1. Validasi Input
 	if err := validator.Validate.Struct(req); err != nil {
 		return errors.New("validasi gagal, pastikan semua data terisi dengan benar (min. 6 karakter untuk password)")
@@ -48,7 +48,7 @@ func (s *authService) Register(req core.RegisterRequest) error {
 	return s.repo.CreateUser(user)
 }
 
-func (s *authService) Login(req core.LoginRequest) (string, error) {
+func (s *authService) Login(req LoginRequest) (string, error) {
 	// 1. Cari user
 	user, err := s.repo.FindByUsername(req.Username)
 	if err != nil {

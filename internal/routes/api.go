@@ -7,11 +7,14 @@ import (
 	"go-fiber-pos/internal/modules/category"
 	"go-fiber-pos/internal/modules/product"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 )
 
 // SetupRoutes merakit semua dependency dan mendaftarkan endpoint
 func SetupRoutes(app *fiber.App) {
+	v := validator.New()
+	
 	api := app.Group("/api")
 
 	// Route Test Ping
@@ -41,5 +44,5 @@ func SetupRoutes(app *fiber.App) {
 	// Lempar grup dan koneksi DB ke masing-masing modul
 	auth.SetupRoutes(authGroup, config.DB)
 	category.SetupRoutes(adminGroup, publicGroup, config.DB)
-	product.SetupRoutes(adminGroup, publicGroup, config.DB)
+	product.SetupRoutes(adminGroup, publicGroup, config.DB, v)
 }

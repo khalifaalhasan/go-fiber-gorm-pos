@@ -1,22 +1,23 @@
 package product
 
 import (
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
 
-// SetupRoutes menerima Group dari terminal pusat (admin & public)
-func SetupRoutes(adminGroup fiber.Router, publicGroup fiber.Router, db *gorm.DB) {
-	// 1. Dependency Injection Khusus Product
+
+func SetupRoutes(adminGroup fiber.Router, publicGroup fiber.Router, db *gorm.DB, v *validator.Validate) {
+	
 	repo := NewProductRepository(db)
-	service := NewProductService(repo)
+	service := NewProductService(repo, v)
 	adminCtrl := NewProductController(service)
 	publicCtrl := NewPublicProductController(service)
 
-	// 2. Daftarkan Endpoint
-	// Rute Admin (Otomatis kena middleware JWT dari pusat)
+	
+	
 	adminGroup.Post("/products", adminCtrl.Create)
 
-	// Rute Public (Katalog QR)
+	
 	publicGroup.Get("/menu/products", publicCtrl.GetAllMenu)
 }

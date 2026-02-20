@@ -32,3 +32,4 @@ type ProductResponse struct {
 	PromoStartTime string    `json:"promo_start_time"`
 	PromoEndTime   string    `json:"promo_end_time"`
 }
+

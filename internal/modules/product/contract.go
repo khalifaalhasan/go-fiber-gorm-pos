@@ -5,6 +5,9 @@ import (
 	"go-fiber-pos/internal/core"
 )
 
+
+//go:generate mockgen -destination=mocks/mock_repository.go -package=mocks -source=contract.go ProductRepository
+
 type ProductRepository interface {
 	Create(product *core.Product) error
 	GetAll() ([]core.Product, error)

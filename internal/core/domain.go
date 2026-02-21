@@ -9,21 +9,52 @@ import (
 )
 
 // ==========================================
-// APP CONFIGURATION (Hanya 1 Baris Data Nanti)
+// CONSTANTS / ENUMS
 // ==========================================
 
+const (
+	// Order Source
+	OrderSourceCashier = "CASHIER"
+	OrderSourceEMenu   = "E_MENU"
 
+	// Order Status
+	OrderStatusPending   = "PENDING"
+	OrderStatusCompleted = "COMPLETED"
+	OrderStatusCancelled = "CANCELLED"
 
-// StoreProfile menggantikan Store. Dipakai untuk header struk kasir/UI.
+	// Payment Status
+	PaymentStatusUnpaid = "UNPAID"
+	PaymentStatusPaid   = "PAID"
+	PaymentStatusFailed = "FAILED"
+
+	// Payment Method
+	PaymentMethodCash     = "CASH"
+	PaymentMethodQRIS     = "QRIS"
+	PaymentMethodTransfer = "TRANSFER"
+
+	// Voucher Discount Type
+	DiscountTypePercentage = "PERCENTAGE"
+	DiscountTypeFixed      = "FIXED"
+)
+
+// ==========================================
+// APP CONFIGURATION (Single Row)
+// ==========================================
+
+// StoreProfile menyimpan konfigurasi toko. Single-tenant, hanya 1 baris.
 type StoreProfile struct {
-	ID        uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	Name      string         `gorm:"type:varchar(255);not null" json:"name"`
-	Address   string         `gorm:"type:text" json:"address"`
-	Phone     string         `gorm:"type:varchar(20)" json:"phone"`
-	MarkupFee int            `gorm:"default:0" json:"markup_fee"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	ID        uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
+	Name      string    `gorm:"type:varchar(255);not null" json:"name"`
+	Address   string    `gorm:"type:text" json:"address"`
+	Phone     string    `gorm:"type:varchar(20)" json:"phone"`
+	MarkupFee int       `gorm:"default:0" json:"markup_fee"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// ==========================================
+// USERS
+// ==========================================
 
 type User struct {
 	ID           uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
@@ -42,8 +73,8 @@ type User struct {
 
 type Category struct {
 	ID        uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	Name      string         `gorm:"type:varchar(255);unique;not null" json:"name"` // Langsung unique global
-	Slug 	  string 		 `gorm:"type:varchar(255);unique;index" json:"slug"`
+	Name      string         `gorm:"type:varchar(255);unique;not null" json:"name"`
+	Slug      string         `gorm:"type:varchar(255);unique;index" json:"slug"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
@@ -52,16 +83,17 @@ type Category struct {
 type Product struct {
 	ID             uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	CategoryID     uuid.UUID      `gorm:"type:uuid;not null" json:"category_id"`
-	Name           string         `gorm:"type:varchar(255);not null" json:"name"` // Bisa ditambah unique kalau mau
-	Slug           string         `gorm:"type:varchar(255);index" json:"slug"` // Bisa ditambah unique kalau mau
+	Name           string         `gorm:"type:varchar(255);not null" json:"name"`
+	Slug           string         `gorm:"type:varchar(255);index" json:"slug"`
 	Description    string         `gorm:"type:text" json:"description"`
 	ImageURL       string         `gorm:"type:varchar(255)" json:"image_url"`
 	NormalPrice    int            `gorm:"not null" json:"normal_price"`
+	Stock          int            `gorm:"default:0" json:"stock"` // Dikurangi via pessimistic lock saat checkout
 	IsAvailable    bool           `gorm:"default:true" json:"is_available"`
 	IsPromoActive  bool           `gorm:"default:false" json:"is_promo_active"`
 	PromoPrice     int            `json:"promo_price"`
-	PromoStartTime string         `gorm:"type:varchar(5)" json:"promo_start_time"`
-	PromoEndTime   string         `gorm:"type:varchar(5)" json:"promo_end_time"`
+	PromoStartTime string         `gorm:"type:varchar(5)" json:"promo_start_time"` // Format "HH:MM"
+	PromoEndTime   string         `gorm:"type:varchar(5)" json:"promo_end_time"`   // Format "HH:MM"
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
@@ -76,13 +108,26 @@ type Product struct {
 type Voucher struct {
 	ID                uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	Code              string    `gorm:"type:varchar(50);unique;not null" json:"code"`
-	DiscountType      string    `gorm:"type:varchar(50);not null" json:"discount_type"` // PERCENTAGE / FIXED
+	DiscountType      string    `gorm:"type:varchar(50);not null" json:"discount_type"` // PERCENTAGE | FIXED
 	DiscountValue     int       `gorm:"not null" json:"discount_value"`
 	MinOrderAmount    int       `gorm:"default:0" json:"min_order_amount"`
-	MaxDiscountAmount int       `gorm:"default:0" json:"max_discount_amount"`
+	MaxDiscountAmount int       `gorm:"default:0" json:"max_discount_amount"` // 0 = no cap (untuk FIXED tidak relevan)
 	ValidUntil        time.Time `json:"valid_until"`
 	IsActive          bool      `gorm:"default:true" json:"is_active"`
 	CreatedAt         time.Time `json:"created_at"`
+}
+
+// ==========================================
+// DAILY COUNTER (Untuk atomic queue number)
+// ==========================================
+
+// DailyCounter adalah Single Source of Truth untuk nomor antrean per hari per source.
+// Menggunakan FOR UPDATE pessimistic lock saat increment untuk mencegah race condition.
+type DailyCounter struct {
+	ID        string `gorm:"type:varchar(50);primaryKey" json:"id"`     // Format: "CASHIER-20260221"
+	Date      string `gorm:"type:varchar(10);not null" json:"date"`      // Format: "20260221"
+	Source    string `gorm:"type:varchar(50);not null" json:"source"`    // CASHIER | E_MENU
+	LastCount int    `gorm:"not null;default:0" json:"last_count"`
 }
 
 // ==========================================
@@ -92,6 +137,8 @@ type Voucher struct {
 type Order struct {
 	ID               uuid.UUID  `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	VoucherID        *uuid.UUID `gorm:"type:uuid" json:"voucher_id"` // Pointer karena opsional
+	OrderSource      string     `gorm:"type:varchar(50);not null;default:'CASHIER'" json:"order_source"` // CASHIER | E_MENU
+	QueueNumber      string     `gorm:"type:varchar(20)" json:"queue_number"`                            // K-001 | E-001
 	TableNumber      *string    `gorm:"type:varchar(50)" json:"table_number"`
 	OrderStatus      string     `gorm:"type:varchar(50);default:'PENDING'" json:"order_status"`
 	PaymentStatus    string     `gorm:"type:varchar(50);default:'UNPAID'" json:"payment_status"`
@@ -102,12 +149,11 @@ type Order struct {
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
 
-	Voucher  *Voucher    `gorm:"foreignKey:VoucherID" json:"voucher,omitempty"` // Perbaikan: pointer biar aman kalau nil
-	Items    []OrderItem `gorm:"foreignKey:OrderID" json:"items"`    
-	Payments []Payment   `gorm:"foreignKey:OrderID" json:"payments"` 
+	Voucher  *Voucher    `gorm:"foreignKey:VoucherID" json:"voucher,omitempty"`
+	Items    []OrderItem `gorm:"foreignKey:OrderID" json:"items"`
+	Payments []Payment   `gorm:"foreignKey:OrderID" json:"payments"`
 }
 
-// (OrderItem dan Payment tetap sama seperti kodemu sebelumnya)
 type OrderItem struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	OrderID   uuid.UUID `gorm:"type:uuid;not null" json:"order_id"`
@@ -122,23 +168,28 @@ type OrderItem struct {
 }
 
 type Payment struct {
-	ID                    uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	OrderID               uuid.UUID `gorm:"type:uuid;not null" json:"order_id"`
-	PaymentMethod         string    `gorm:"type:varchar(50);not null" json:"payment_method"` 
+	ID                   uuid.UUID  `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
+	OrderID              uuid.UUID  `gorm:"type:uuid;not null" json:"order_id"`
+	PaymentMethod        string     `gorm:"type:varchar(50);not null" json:"payment_method"` // CASH | QRIS | TRANSFER
 	MidtransTransactionID *string   `gorm:"type:varchar(255)" json:"midtrans_transaction_id"`
-	AmountPaid            int       `gorm:"not null" json:"amount_paid"`
-	PaymentStatus         string    `gorm:"type:varchar(50);not null" json:"payment_status"` 
-	PaidAt                time.Time `json:"paid_at"`
-	CreatedAt             time.Time `json:"created_at"`
+	IdempotencyKey       string     `gorm:"type:varchar(255);uniqueIndex" json:"idempotency_key"` // Midtrans order_id, mencegah duplikasi webhook
+	AmountPaid           int        `gorm:"not null" json:"amount_paid"`
+	PaymentStatus        string     `gorm:"type:varchar(50);not null;default:'UNPAID'" json:"payment_status"` // UNPAID | PAID | FAILED
+	PaidAt               *time.Time `gorm:"type:timestamptz" json:"paid_at"`
+	WebhookReceivedAt    *time.Time `gorm:"type:timestamptz" json:"webhook_received_at"` // Timestamp saat webhook diterima pertama kali
+	CreatedAt            time.Time  `json:"created_at"`
 }
 
+// ==========================================
+// GORM HOOKS
+// ==========================================
+
 func (c *Category) BeforeSave(tx *gorm.DB) (err error) {
-    // 3. Pastikan memanggil slug.Make (package.Fungsi)
-    c.Slug = slug.Make(c.Name)
-    return
+	c.Slug = slug.Make(c.Name)
+	return
 }
 
 func (p *Product) BeforeSave(tx *gorm.DB) (err error) {
-    p.Slug = slug.Make(p.Name)
-    return
+	p.Slug = slug.Make(p.Name)
+	return
 }

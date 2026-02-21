@@ -37,6 +37,7 @@ func ConnectDatabase() {
 		&core.Category{},
 		&core.Product{},
 		&core.Voucher{},
+		&core.DailyCounter{},
 		&core.Order{},
 		&core.OrderItem{},
 		&core.Payment{},

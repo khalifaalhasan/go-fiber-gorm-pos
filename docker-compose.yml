@@ -1,7 +1,8 @@
+
 services:
   postgres-db:
-    image: postgres:15-alpine
-    container_name: pos_postgres_local
+    image: postgres:15-alpine # ambil dari docker hub
+    container_name: postgres-db
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -10,17 +11,35 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pos_db_data:/var/lib/postgresql/data
-    # Tambahkan blok deploy ini untuk melimit resource
+      - postgres-db-data:/var/lib/postgresql/data
+    
     deploy:
       resources:
         limits:
-          cpus: "0.5" # Maksimal pakai setengah core CPU laptop
-          memory: 512M # Maksimal RAM 512 MB (sudah sangat sisa buat lokal)
+          cpus: "0.5" 
+          memory: 512M 
         reservations:
-          memory: 128M # Garansi RAM minimal yang disediakan
+          memory: 128M 
 
-  # (Biarkan service app_server jika ada)
+  
+          
+  # backend-api:
+  #   build: 
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: go-fiber-api
+  #   restart: always
+  #   ports:
+  #     - "3000:3000" # Map port Fiber
+  #   environment:
+  #     # BEST PRACTICE: Gunakan nama service database sebagai Host
+  #     - DB_HOST=postgres-db 
+  #     - DB_PORT=5432
+  #     - DB_USER=${DB_USER:-root}
+  #     - DB_PASSWORD=${DB_PASSWORD:-secret}
+  #     - DB_NAME=${DB_NAME:-pos_db}
+  #   depends_on:
+  #     - postgres-db # Pastikan DB jalan duluan sebelum backend
 
 volumes:
-  pos_db_data:
+  postgres-db-data:

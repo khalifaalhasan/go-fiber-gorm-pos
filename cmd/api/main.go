@@ -3,16 +3,14 @@ package main
 import (
 	"go-fiber-pos/internal/config"
 	"go-fiber-pos/internal/routes" // Import package routes yang baru dibuat
-	"go-fiber-pos/pkg/validator"
 	"go-fiber-pos/pkg/logger"
-
-
+	"go-fiber-pos/pkg/validator"
 
 	"os"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	fiberlog "github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/joho/godotenv"
 )
 
@@ -29,6 +27,9 @@ func main() {
 
 	// 3. Konek GORM ke Database
 	config.ConnectDatabase()
+	
+	// 4. Konek ke Redis
+	config.ConnectRedis()
 
 	// 4. Setup Fiber App
 	app := fiber.New(fiber.Config{

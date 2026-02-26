@@ -6,6 +6,7 @@ import (
 	"go-fiber-pos/internal/middleware"
 	"go-fiber-pos/internal/modules/auth"
 	"go-fiber-pos/internal/modules/category"
+	"go-fiber-pos/internal/modules/inventory"
 	"go-fiber-pos/internal/modules/order"
 	"go-fiber-pos/internal/modules/payment"
 	"go-fiber-pos/internal/modules/product"
@@ -61,6 +62,7 @@ func SetupRoutes(app *fiber.App) {
 	// New modules
 	store.SetupRoutes(adminGroup, config.DB, v)
 	voucher.SetupRoutes(adminGroup, config.DB, v)
+	inventory.SetupRoutes(adminGroup, config.DB, v)
 	order.SetupRoutes(adminGroup, config.DB, v)
 	payment.SetupRoutes(adminGroup, webhookGroup, config.DB, v, midtransAdapter)
 }

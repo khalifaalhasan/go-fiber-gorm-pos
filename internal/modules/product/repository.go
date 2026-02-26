@@ -23,13 +23,13 @@ func (r *productRepository) Create(product *model.Product) error {
 
 func (r* productRepository) GetAll() ([]model.Product, error){
 	var products []model.Product
-	err := r.db.Find(&products).Error
+	err := r.db.Preload("Inventory").Find(&products).Error
 	return products, err
 }
 
 func (r *productRepository) FindByName(name string) (*model.Product, error) {
     var product model.Product
-    err := r.db.Where("name = ?", name).First(&product).Error
+    err := r.db.Preload("Inventory").Where("name = ?", name).First(&product).Error
     
     if err != nil {
         // Jika errornya adalah 'Record Not Found', kembalikan nil tanpa error

@@ -15,6 +15,7 @@ type CreateProductRequest struct {
 	PromoPrice     int    `json:"promo_price"`
 	PromoStartTime string `json:"promo_start_time"`
 	PromoEndTime   string `json:"promo_end_time"`
+	Stock 		   int    `json:"stock"`
 }
 
 // Response DTO (Dari Server ke Frontend)
@@ -31,5 +32,6 @@ type ProductResponse struct {
 	PromoPrice     int       `json:"promo_price"`
 	PromoStartTime string    `json:"promo_start_time"`
 	PromoEndTime   string    `json:"promo_end_time"`
+	Stock          int       `json:"stock"`
 }
 

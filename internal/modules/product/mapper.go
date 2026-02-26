@@ -4,7 +4,7 @@ import model "go-fiber-pos/internal/core"
 
 // ToProductResponse: Domain GORM -> Response DTO
 func ToProductResponse(domain *model.Product) ProductResponse {
-	return ProductResponse{
+	res := ProductResponse{
 		ID:             domain.ID,
 		CategoryID:     domain.CategoryID,
 		Name:           domain.Name,
@@ -18,6 +18,12 @@ func ToProductResponse(domain *model.Product) ProductResponse {
 		PromoStartTime: domain.PromoStartTime,
 		PromoEndTime:   domain.PromoEndTime,
 	}
+	
+	if domain.Inventory != nil {
+		res.Stock = domain.Inventory.QtyAvailable
+	}
+	
+	return res
 }
 
 // ToProductResponseList: Array Domain -> Array Response DTO

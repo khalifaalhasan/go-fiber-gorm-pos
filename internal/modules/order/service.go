@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"go-fiber-pos/internal/core"
+	"go-fiber-pos/internal/modules/inventory"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -15,12 +16,13 @@ import (
 )
 
 type orderService struct {
-	repo OrderRepository
-	v    *validator.Validate
+	repo       OrderRepository
+	invService inventory.InventoryService
+	v          *validator.Validate
 }
 
-func NewOrderService(repo OrderRepository, v *validator.Validate) OrderService {
-	return &orderService{repo: repo, v: v}
+func NewOrderService(repo OrderRepository, invService inventory.InventoryService, v *validator.Validate) OrderService {
+	return &orderService{repo: repo, invService: invService, v: v}
 }
 
 func (s *orderService) Checkout(req CheckoutRequest) (*core.Order, error) {
@@ -29,134 +31,122 @@ func (s *orderService) Checkout(req CheckoutRequest) (*core.Order, error) {
 		return nil, err
 	}
 
-	// 2. Buka transaksi database
-	tx := s.repo.DB().Begin()
-	if tx.Error != nil {
-		return nil, core.ErrInternalServer
-	}
-	// Guard: jika terjadi panic, pastikan transaksi di-rollback
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
+	var finalOrder *core.Order
 
-	// 3. Resolve Voucher (baca biasa, tanpa lock — tidak perlu)
-	var voucher *core.Voucher
-	var voucherID *uuid.UUID
-	if req.VoucherCode != "" {
-		v, err := s.repo.FindVoucherByCode(req.VoucherCode)
-		if err != nil {
-			tx.Rollback()
-			return nil, core.ErrVoucherInvalid
-		}
-		if !v.IsActive || v.ValidUntil.Before(time.Now()) {
-			tx.Rollback()
-			return nil, core.ErrVoucherInvalid
-		}
-		voucher = v
-		voucherID = &v.ID
-	}
-
-	// 4. ⭐ ANTI-DEADLOCK: Sort items berdasarkan ProductID ascending SEBELUM akuisisi lock.
+	// ⭐ ANTI-DEADLOCK: Sort items berdasarkan ProductID ascending SEBELUM akuisisi lock.
 	// Ini memastikan semua transaksi concurrent mengunci baris dalam urutan yang sama,
 	// sehingga tidak ada circular wait → tidak ada deadlock.
 	sort.Slice(req.Items, func(i, j int) bool {
 		return strings.Compare(req.Items[i].ProductID.String(), req.Items[j].ProductID.String()) < 0
 	})
 
-	// 5. Generate nomor antrean menggunakan DailyCounter + FOR UPDATE (atomic)
-	queueNumber, err := s.repo.GetNextQueueNumber(tx, req.OrderSource)
-	if err != nil {
-		tx.Rollback()
-		return nil, core.ErrInternalServer
-	}
+	err := s.repo.ExecuteTx(func(tx *gorm.DB) error {
+		var voucher *core.Voucher
+		var voucherID *uuid.UUID
 
-	// 6. Loop setiap item — akuisisi lock dan potong stok
-	var orderItems []core.OrderItem
-	var totalBasePrice int
-
-	for _, item := range req.Items {
-		// a. Kunci baris produk dengan FOR UPDATE
-		product, err := s.repo.LockAndGetProduct(tx, item.ProductID)
-		if err != nil {
-			tx.Rollback()
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil, fmt.Errorf("produk dengan ID %s tidak ditemukan", item.ProductID)
+		if req.VoucherCode != "" {
+			var err error
+			voucher, err = s.repo.FindVoucherByCode(req.VoucherCode)
+			if err != nil {
+				return err
 			}
-			return nil, core.ErrInternalServer
+			if !voucher.IsActive || voucher.ValidUntil.Before(time.Now()) {
+				return core.ErrVoucherInvalid
+			}
+			voucherID = &voucher.ID
 		}
 
-		// b. Validasi stok SETELAH lock diperoleh (bukan sebelum!)
-		if product.Stock < item.Qty {
-			tx.Rollback()
-			return nil, fmt.Errorf("%w: %s (tersisa %d)", core.ErrInsufficientStock, product.Name, product.Stock)
+		// 4. Hitung Platform Fee (Contoh: diambil dari settings toko)
+		platformFee := s.repo.GetStoreMarkupFee()
+
+		// 5. Generate Queue Number (Menggunakan FOR UPDATE di tabel daily_counters)
+		queueNumber, err := s.repo.GetNextQueueNumber(tx, req.OrderSource)
+		if err != nil {
+			return err
 		}
 
-		// c. Kurangi stok — masih dalam tx dan lock
-		product.Stock -= item.Qty
-		if err := s.repo.DeductStockWithTx(tx, product); err != nil {
-			tx.Rollback()
-			return nil, core.ErrInternalServer
+		// 6. Loop setiap item — akuisisi lock dan potong stok
+		var orderItems []core.OrderItem
+		var totalBasePrice int
+		
+		orderID := uuid.New().String()
+
+		for _, item := range req.Items {
+			// a. Kunci baris produk dengan FOR UPDATE
+			product, err := s.repo.LockAndGetProduct(tx, item.ProductID)
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return fmt.Errorf("%w: product not found", core.ErrNotFound)
+				}
+				return core.ErrInternalServer
+			}
+
+			// b. Kunci stok produk dan potong stok di modul inventory (yang juga akan membuat log movement)
+			if err := s.invService.DeductStockWithTx(tx.Statement.Context, tx, product.ID, item.Qty, "ORDER", orderID); err != nil {
+				if errors.Is(err, core.ErrInsufficientStock) {
+					return fmt.Errorf("%w: %s", core.ErrInsufficientStock, product.Name)
+				}
+				return err
+			}
+
+			// c. Tentukan harga satuan (promo jika aktif dan dalam rentang waktu)
+			unitPrice := calculateUnitPrice(product)
+			subtotal := unitPrice * item.Qty
+			totalBasePrice += subtotal
+
+			// d. Siapkan entity OrderItem
+			orderItems = append(orderItems, core.OrderItem{
+				ID:        uuid.New(),
+				ProductID: product.ID,
+				Qty:       item.Qty,
+				UnitPrice: unitPrice,
+				Subtotal:  subtotal,
+				Notes:     item.Notes, // Keep notes from original
+			})
 		}
 
-		// d. Tentukan harga satuan (promo jika aktif dan dalam rentang waktu)
-		unitPrice := calculateUnitPrice(product)
-		subtotal := unitPrice * item.Qty
-		totalBasePrice += subtotal
-
-		orderItems = append(orderItems, core.OrderItem{
-			ID:        uuid.New(),
-			ProductID: product.ID,
-			Qty:       item.Qty,
-			UnitPrice: unitPrice,
-			Subtotal:  subtotal,
-			Notes:     item.Notes,
-		})
-	}
-
-	// 7. Hitung diskon voucher
-	totalDiscount := 0
-	if voucher != nil {
-		if totalBasePrice < voucher.MinOrderAmount {
-			tx.Rollback()
-			return nil, core.ErrVoucherMinOrder
+		// 7. Hitung diskon voucher
+		totalDiscount := 0
+		if voucher != nil {
+			if totalBasePrice < voucher.MinOrderAmount {
+				return core.ErrVoucherMinOrder
+			}
+			totalDiscount = calculateDiscount(voucher, totalBasePrice)
 		}
-		totalDiscount = calculateDiscount(voucher, totalBasePrice)
+
+		// 8. Hitung Grand Total
+		totalFinalAmount := totalBasePrice - totalDiscount + platformFee
+
+		// 9. Buat entity Order dan simpan dalam transaksi
+		orderUUID, _ := uuid.Parse(orderID)
+		order := &core.Order{
+			ID:               orderUUID,
+			VoucherID:        voucherID,
+			OrderSource:      req.OrderSource,
+			QueueNumber:      queueNumber,
+			TableNumber:      req.TableNumber, // Keep TableNumber from original
+			OrderStatus:      core.OrderStatusPending, // Keep OrderStatus from original
+			PaymentStatus:    core.PaymentStatusUnpaid, // Keep PaymentStatus from original
+			TotalBasePrice:   totalBasePrice,
+			TotalDiscount:    totalDiscount,
+			PlatformFee:      platformFee,
+			TotalFinalAmount: totalFinalAmount,
+			Items:            orderItems,
+		}
+
+		if err := s.repo.CreateWithTx(tx, order); err != nil {
+			return core.ErrInternalServer
+		}
+
+		finalOrder = order
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
-	// 8. Ambil platform fee dari profil toko
-	platformFee := s.repo.GetStoreMarkupFee()
-
-	totalFinalAmount := totalBasePrice - totalDiscount + platformFee
-
-	// 9. Buat entity Order dan simpan dalam transaksi
-	order := &core.Order{
-		ID:               uuid.New(),
-		VoucherID:        voucherID,
-		OrderSource:      req.OrderSource,
-		QueueNumber:      queueNumber,
-		TableNumber:      req.TableNumber,
-		OrderStatus:      core.OrderStatusPending,
-		PaymentStatus:    core.PaymentStatusUnpaid,
-		TotalBasePrice:   totalBasePrice,
-		TotalDiscount:    totalDiscount,
-		PlatformFee:      platformFee,
-		TotalFinalAmount: totalFinalAmount,
-		Items:            orderItems,
-	}
-
-	if err := s.repo.CreateWithTx(tx, order); err != nil {
-		tx.Rollback()
-		return nil, core.ErrInternalServer
-	}
-
-	// 10. Commit — semua lock dilepas, semua perubahan permanen
-	if err := tx.Commit().Error; err != nil {
-		return nil, core.ErrInternalServer
-	}
-
-	return order, nil
+	return finalOrder, nil
 }
 
 func (s *orderService) GetAllOrders() ([]core.Order, error) {

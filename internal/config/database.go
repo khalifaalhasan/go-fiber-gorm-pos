@@ -41,6 +41,9 @@ func ConnectDatabase() {
 		&core.Order{},
 		&core.OrderItem{},
 		&core.Payment{},
+		&core.Inventory{},
+		&core.InventoryMovement{},
+		&core.IdempotencyRecord{},
 	)
 
 	if err != nil {

@@ -20,8 +20,8 @@ func NewOrderRepository(db *gorm.DB) OrderRepository {
 }
 
 // DB mengekspos koneksi database untuk pembuatan transaksi di service layer.
-func (r *orderRepository) DB() *gorm.DB {
-	return r.db
+func (r *orderRepository) ExecuteTx(fn func(tx *gorm.DB) error) error {
+	return r.db.Transaction(fn)
 }
 
 // CreateWithTx menyimpan order beserta semua OrderItem dalam satu transaksi.
@@ -39,11 +39,6 @@ func (r *orderRepository) LockAndGetProduct(tx *gorm.DB, productID uuid.UUID) (*
 		return nil, err
 	}
 	return &product, nil
-}
-
-// DeductStockWithTx menyimpan perubahan stok produk dalam transaksi yang ada.
-func (r *orderRepository) DeductStockWithTx(tx *gorm.DB, product *core.Product) error {
-	return tx.Save(product).Error
 }
 
 // GetNextQueueNumber menghasilkan nomor antrean yang dijamin unik dan atomic.

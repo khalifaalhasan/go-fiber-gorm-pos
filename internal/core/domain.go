@@ -88,7 +88,6 @@ type Product struct {
 	Description    string         `gorm:"type:text" json:"description"`
 	ImageURL       string         `gorm:"type:varchar(255)" json:"image_url"`
 	NormalPrice    int            `gorm:"not null" json:"normal_price"`
-	Stock          int            `gorm:"default:0" json:"stock"` // Dikurangi via pessimistic lock saat checkout
 	IsAvailable    bool           `gorm:"default:true" json:"is_available"`
 	IsPromoActive  bool           `gorm:"default:false" json:"is_promo_active"`
 	PromoPrice     int            `json:"promo_price"`
@@ -98,7 +97,35 @@ type Product struct {
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
 
-	Category *Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
+	Category  *Category  `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
+	Inventory *Inventory `gorm:"foreignKey:ProductID" json:"inventory,omitempty"`
+}
+
+// ==========================================
+// INVENTORY
+// ==========================================
+
+type Inventory struct {
+	ID           uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
+	ProductID    uuid.UUID `gorm:"type:uuid;uniqueIndex:idx_product_inventory;not null" json:"product_id"`
+	QtyAvailable int       `gorm:"not null;default:0" json:"qty_available"`
+	QtyReserved  int       `gorm:"not null;default:0" json:"qty_reserved"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+
+	Product *Product `gorm:"foreignKey:ProductID" json:"product,omitempty"`
+}
+
+type InventoryMovement struct {
+	ID            uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
+	InventoryID   uuid.UUID `gorm:"type:uuid;not null;index" json:"inventory_id"`
+	ReferenceType string    `gorm:"type:varchar(50);not null" json:"reference_type"` // ORDER, RESTOCK, ADJUSTMENT
+	ReferenceID   string    `gorm:"type:varchar(255)" json:"reference_id"`
+	QtyChange     int       `gorm:"not null" json:"qty_change"`
+	Notes         string    `gorm:"type:text" json:"notes"`
+	CreatedAt     time.Time `json:"created_at"`
+
+	Inventory *Inventory `gorm:"foreignKey:InventoryID" json:"inventory,omitempty"`
 }
 
 // ==========================================
@@ -181,6 +208,18 @@ type Payment struct {
 }
 
 // ==========================================
+// IDEMPOTENCY
+// ==========================================
+
+// IdempotencyRecord adalah source of truth untuk request yang sudah berhasil diproses.
+type IdempotencyRecord struct {
+	Key          string    `gorm:"type:varchar(255);primaryKey" json:"key"`
+	ResponseBody string    `gorm:"type:text;not null" json:"response_body"`
+	StatusCode   int       `gorm:"not null" json:"status_code"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// ==========================================
 // GORM HOOKS
 // ==========================================
 
@@ -192,4 +231,14 @@ func (c *Category) BeforeSave(tx *gorm.DB) (err error) {
 func (p *Product) BeforeSave(tx *gorm.DB) (err error) {
 	p.Slug = slug.Make(p.Name)
 	return
+}
+
+func (p *Product) AfterCreate(tx *gorm.DB) (err error) {
+	inv := &Inventory{
+		ID:           uuid.New(),
+		ProductID:    p.ID,
+		QtyAvailable: 0,
+		QtyReserved:  0,
+	}
+	return tx.Create(inv).Error
 }

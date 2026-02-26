@@ -1,0 +1,26 @@
+# 1. Version Control (Sangat penting agar context build tidak bengkak)
+.git/
+.gitignore
+
+# 2. Local Environment & Secrets (Keamanan)
+.env
+*.env
+
+# 3. Dokumentasi & Konfigurasi Eksternal (Tidak dipakai oleh runtime Go)
+README.md
+docker-compose.yml
+.dockerignore
+Dockerfile
+
+# 4. Build Outputs & Binaries (Kita akan build ulang di dalam container)
+bin/
+tmp/
+*.exe
+*.out
+
+# 5. IDE & Editor Workspaces
+.vscode/
+.idea/
+
+# 6. Go Vendor (Jika menggunakan go mod download di dalam Dockerfile)
+vendor/

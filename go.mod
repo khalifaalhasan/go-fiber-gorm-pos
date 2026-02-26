@@ -9,6 +9,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.15.0
 	github.com/joho/godotenv v1.5.1
+	github.com/midtrans/midtrans-go v1.3.8
+	github.com/redis/go-redis/v9 v9.18.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/mock v0.6.0
@@ -19,8 +21,10 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -41,6 +45,7 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.69.0 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect

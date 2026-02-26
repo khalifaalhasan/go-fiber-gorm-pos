@@ -119,6 +119,19 @@ func (s *inventoryService) GetMovements(ctx context.Context, productID uuid.UUID
 	return res, nil
 }
 
+func (s *inventoryService) CheckStockWithTx(ctx context.Context, tx *gorm.DB, productID uuid.UUID, qty int) error {
+	inv, err := s.repo.FindByProductIDForUpdateWithTx(tx, productID)
+	if err != nil {
+		return err
+	}
+
+	if inv.QtyAvailable < qty {
+		return core.ErrInsufficientStock
+	}
+
+	return nil
+}
+
 func (s *inventoryService) DeductStockWithTx(ctx context.Context, tx *gorm.DB, productID uuid.UUID, qty int, referenceType, referenceID string) error {
 	inv, err := s.repo.FindByProductIDForUpdateWithTx(tx, productID)
 	if err != nil {

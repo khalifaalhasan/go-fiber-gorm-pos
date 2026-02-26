@@ -27,6 +27,9 @@ type InventoryService interface {
 	GetMovements(ctx context.Context, productID uuid.UUID) ([]InventoryMovementResponse, error)
 	
 	// Called internally by Order Module during checkout
+	CheckStockWithTx(ctx context.Context, tx *gorm.DB, productID uuid.UUID, qty int) error
+
+	// Called internally by Order Module after successful payment
 	DeductStockWithTx(ctx context.Context, tx *gorm.DB, productID uuid.UUID, qty int, referenceType, referenceID string) error
 	
 	// Called internally by Product Module during creation

@@ -69,3 +69,8 @@ func (r *paymentRepository) UpdateOrderPaymentStatus(orderID uuid.UUID, status s
 		Where("id = ?", orderID).
 		Update("payment_status", status).Error
 }
+
+// ExecuteTx mengekspos koneksi database untuk pembuatan transaksi di service layer.
+func (r *paymentRepository) ExecuteTx(fn func(tx *gorm.DB) error) error {
+	return r.db.Transaction(fn)
+}

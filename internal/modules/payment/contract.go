@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // PaymentGateway adalah PORT — abstraksi untuk semua payment gateway.
@@ -25,6 +26,7 @@ type PaymentRepository interface {
 	UpdateStatus(paymentID uuid.UUID, status string, paidAt *time.Time) error
 	UpdateWebhookTimestamp(paymentID uuid.UUID, receivedAt time.Time) error
 	UpdateOrderPaymentStatus(orderID uuid.UUID, status string) error
+	ExecuteTx(fn func(tx *gorm.DB) error) error
 }
 
 // PaymentService mendefinisikan kontrak business logic untuk Payment.

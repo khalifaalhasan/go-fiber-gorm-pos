@@ -66,6 +66,20 @@ func (mr *MockInventoryServiceMockRecorder) CreateDefaultStock(ctx, productID an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDefaultStock", reflect.TypeOf((*MockInventoryService)(nil).CreateDefaultStock), ctx, productID)
 }
 
+// CheckStockWithTx mocks base method.
+func (m *MockInventoryService) CheckStockWithTx(ctx context.Context, tx *gorm.DB, productID uuid.UUID, qty int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckStockWithTx", ctx, tx, productID, qty)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckStockWithTx indicates an expected call of CheckStockWithTx.
+func (mr *MockInventoryServiceMockRecorder) CheckStockWithTx(ctx, tx, productID, qty any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckStockWithTx", reflect.TypeOf((*MockInventoryService)(nil).CheckStockWithTx), ctx, tx, productID, qty)
+}
+
 // DeductStockWithTx mocks base method.
 func (m *MockInventoryService) DeductStockWithTx(ctx context.Context, tx *gorm.DB, productID uuid.UUID, qty int, referenceType, referenceID string) error {
 	m.ctrl.T.Helper()

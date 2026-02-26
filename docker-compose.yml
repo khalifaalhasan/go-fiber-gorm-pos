@@ -20,9 +20,7 @@ services:
           memory: 512M 
         reservations:
           memory: 128M 
-
-  
-          
+      
   # backend-api:
   #   build: 
   #     context: .
@@ -41,5 +39,40 @@ services:
   #   depends_on:
   #     - postgres-db # Pastikan DB jalan duluan sebelum backend
 
+  # Service Redis
+  redis:
+    image: redis:7-alpine
+    container_name: order_redis_cache
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --save 20 1 --loglevel warning --requirepass "${REDIS_PASSWORD}"
+    volumes: 
+      - redis_data:/data
+    networks:
+      - app_network
+
+  # (Opsional) GUI untuk Redis supaya mudah debugging
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis_gui
+    environment:
+      - REDIS_HOSTS=${REDIS_HOST}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB}
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - app_network
+
 volumes:
   postgres-db-data:
+  redis_data:
+    driver: local
+
+networks:
+  app_network:
+    driver: bridge
+

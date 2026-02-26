@@ -1,0 +1,17 @@
+time="2026-02-26T22:24:16+07:00" level=info msg="Berhasil terhubung ke database PostgreSQL via GORM!"
+time="2026-02-26T22:24:16+07:00" level=info msg="Migrasi database berhasil! Tabel sudah siap digunakan."
+time="2026-02-26T22:24:16+07:00" level=info msg="Berhasil terhubung ke Redis!"
+time="2026-02-26T22:24:16+07:00" level=info msg="Starting server on port 8080"
+
+ ┌───────────────────────────────────────────────────┐ 
+ │            Bangga Punya Web - POS API             │ 
+ │                  Fiber v2.52.11                   │ 
+ │               http://127.0.0.1:8080               │ 
+ │       (bound on host 0.0.0.0 and port 8080)       │ 
+ │                                                   │ 
+ │ Handlers ............ 33  Processes ........... 1 │ 
+ │ Prefork ....... Disabled  PID ............. 82803 │ 
+ └───────────────────────────────────────────────────┘ 
+
+22:24:16 | 401 |      66.623µs | 127.0.0.1 | POST | /api/admin/payments/initiate | -
+signal: killed

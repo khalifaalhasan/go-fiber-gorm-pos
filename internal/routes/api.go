@@ -59,10 +59,13 @@ func SetupRoutes(app *fiber.App) {
 	category.SetupRoutes(adminGroup, publicGroup, config.DB)
 	product.SetupRoutes(adminGroup, publicGroup, config.DB, v)
 
+	invRepo := inventory.NewInventoryRepository(config.DB)
+	invService := inventory.NewInventoryService(invRepo, v)
+
 	// New modules
 	store.SetupRoutes(adminGroup, config.DB, v)
 	voucher.SetupRoutes(adminGroup, config.DB, v)
 	inventory.SetupRoutes(adminGroup, config.DB, v)
 	order.SetupRoutes(adminGroup, config.DB, v)
-	payment.SetupRoutes(adminGroup, webhookGroup, config.DB, v, midtransAdapter)
+	payment.SetupRoutes(adminGroup, webhookGroup, config.DB, v, midtransAdapter, invService)
 }

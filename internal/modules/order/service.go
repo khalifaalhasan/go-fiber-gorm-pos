@@ -81,8 +81,8 @@ func (s *orderService) Checkout(req CheckoutRequest) (*core.Order, error) {
 				return core.ErrInternalServer
 			}
 
-			// b. Kunci stok produk dan potong stok di modul inventory (yang juga akan membuat log movement)
-			if err := s.invService.DeductStockWithTx(tx.Statement.Context, tx, product.ID, item.Qty, "ORDER", orderID); err != nil {
+			// b. Kunci stok produk dan cek ketersediaan stok di modul inventory (tidak dipotong dulu)
+			if err := s.invService.CheckStockWithTx(tx.Statement.Context, tx, product.ID, item.Qty); err != nil {
 				if errors.Is(err, core.ErrInsufficientStock) {
 					return fmt.Errorf("%w: %s", core.ErrInsufficientStock, product.Name)
 				}

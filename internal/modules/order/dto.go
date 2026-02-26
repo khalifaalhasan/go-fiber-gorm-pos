@@ -16,3 +16,12 @@ type CheckoutRequest struct {
 	VoucherCode string              `json:"voucher_code"`
 	Items       []CheckoutItemInput `json:"items" validate:"required,min=1,dive"`
 }
+
+type CheckoutResponse struct {
+	OrderID     uuid.UUID `json:"order_id"`
+	OrderNumber string    `json:"order_number"`
+	OrderSource string    `json:"order_source"`
+	TableNumber *string   `json:"table_number"`
+	VoucherCode string    `json:"voucher_code"`
+	Items       []CheckoutItemInput `json:"items" validate:"required,min=1,dive"`
+}

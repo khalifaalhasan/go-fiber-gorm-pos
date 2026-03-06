@@ -1,0 +1,833 @@
+basePath: /api
+definitions:
+  auth.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  auth.RegisterRequest:
+    properties:
+      name:
+        description: StoreName dan Subdomain DIHAPUS karena Single-Tenant
+        minLength: 3
+        type: string
+      password:
+        minLength: 6
+        type: string
+      username:
+        minLength: 4
+        type: string
+    required:
+    - name
+    - password
+    - username
+    type: object
+  category.CreateCategoryRequest:
+    properties:
+      name:
+        minLength: 3
+        type: string
+    required:
+    - name
+    type: object
+  inventory.AdjustStockRequest:
+    properties:
+      notes:
+        type: string
+      product_id:
+        type: string
+      qty_change:
+        type: integer
+    required:
+    - notes
+    - product_id
+    - qty_change
+    type: object
+  order.CheckoutItemInput:
+    properties:
+      notes:
+        type: string
+      product_id:
+        type: string
+      qty:
+        minimum: 1
+        type: integer
+    required:
+    - product_id
+    - qty
+    type: object
+  order.CheckoutRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/order.CheckoutItemInput'
+        minItems: 1
+        type: array
+      order_source:
+        enum:
+        - CASHIER
+        - E_MENU
+        type: string
+      table_number:
+        type: string
+      voucher_code:
+        type: string
+    required:
+    - items
+    - order_source
+    type: object
+  payment.InitiatePaymentRequest:
+    properties:
+      order_id:
+        type: string
+      payment_method:
+        enum:
+        - CASH
+        - QRIS
+        - TRANSFER
+        type: string
+    required:
+    - order_id
+    - payment_method
+    type: object
+  payment.WebhookPayload:
+    properties:
+      fraud_status:
+        type: string
+      gross_amount:
+        type: string
+      order_id:
+        description: Ini adalah IdempotencyKey kita
+        type: string
+      signature_key:
+        type: string
+      status_code:
+        type: string
+      transaction_id:
+        type: string
+      transaction_status:
+        description: settlement | capture | cancel | deny | expire | pending
+        type: string
+    type: object
+  product.CreateProductRequest:
+    properties:
+      category_id:
+        type: string
+      description:
+        minLength: 10
+        type: string
+      image_url:
+        type: string
+      is_available:
+        type: boolean
+      is_promo_active:
+        type: boolean
+      name:
+        minLength: 3
+        type: string
+      normal_price:
+        minimum: 0
+        type: integer
+      promo_end_time:
+        type: string
+      promo_price:
+        type: integer
+      promo_start_time:
+        type: string
+      stock:
+        type: integer
+    required:
+    - category_id
+    - description
+    - name
+    - normal_price
+    type: object
+  store.UpdateStoreRequest:
+    properties:
+      address:
+        type: string
+      markup_fee:
+        minimum: 0
+        type: integer
+      name:
+        minLength: 3
+        type: string
+      phone:
+        type: string
+    required:
+    - name
+    type: object
+  voucher.CreateVoucherRequest:
+    properties:
+      code:
+        maxLength: 50
+        minLength: 3
+        type: string
+      discount_type:
+        enum:
+        - PERCENTAGE
+        - FIXED
+        type: string
+      discount_value:
+        minimum: 1
+        type: integer
+      max_discount_amount:
+        minimum: 0
+        type: integer
+      min_order_amount:
+        minimum: 0
+        type: integer
+      valid_until:
+        type: string
+    required:
+    - code
+    - discount_type
+    - discount_value
+    - valid_until
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API Dokumentasi untuk Sistem POS (Point of Sale) Bangga Punya Web.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Bangga Punya Web - POS API
+  version: "1.0"
+paths:
+  /admin/categories:
+    get:
+      description: Retrieve a list of all product categories (Admin only).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all categories
+      tags:
+      - categories
+    post:
+      consumes:
+      - application/json
+      description: Create a new category for products (Admin only).
+      parameters:
+      - description: Create Category Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/category.CreateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new category
+      tags:
+      - categories
+  /admin/inventories/{productId}:
+    get:
+      description: Retrieve the current stock level for a specific product (Admin
+        only).
+      parameters:
+      - description: Product UUID
+        in: path
+        name: productId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get stock level by product ID
+      tags:
+      - inventory
+  /admin/inventories/{productId}/movements:
+    get:
+      description: Retrieve the stock movement history for a specific product (Admin
+        only).
+      parameters:
+      - description: Product UUID
+        in: path
+        name: productId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get stock movements
+      tags:
+      - inventory
+  /admin/inventories/adjust:
+    post:
+      consumes:
+      - application/json
+      description: Manually adjust the stock level for a specific product (Admin only).
+      parameters:
+      - description: Adjust Stock Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/inventory.AdjustStockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Adjust stock level
+      tags:
+      - inventory
+  /admin/orders:
+    get:
+      description: Retrieve a list of all orders (Admin only).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all orders
+      tags:
+      - orders
+  /admin/orders/{id}:
+    get:
+      description: Retrieve the details of a specific order by its ID (Admin only).
+      parameters:
+      - description: Order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get order by ID
+      tags:
+      - orders
+  /admin/orders/checkout:
+    post:
+      consumes:
+      - application/json
+      description: Create a new order with items and apply voucher if valid (Admin
+        only).
+      parameters:
+      - description: Checkout Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/order.CheckoutRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new order (Checkout)
+      tags:
+      - orders
+  /admin/payments/initiate:
+    post:
+      consumes:
+      - application/json
+      description: Create a Midtrans Snap payment link for an order (Admin only).
+      parameters:
+      - description: Initiate Payment Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/payment.InitiatePaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Initiate a payment link
+      tags:
+      - payments
+  /admin/products:
+    get:
+      description: Retrieve a list of all products (Admin only).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all products
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      description: Create a new product with details (Admin only).
+      parameters:
+      - description: Create Product Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/product.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new product
+      tags:
+      - products
+  /admin/stores/profile:
+    get:
+      description: Retrieve the store profile information (Admin only).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get store profile
+      tags:
+      - store
+    put:
+      consumes:
+      - application/json
+      description: Update the store profile information (Admin only).
+      parameters:
+      - description: Update Store Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/store.UpdateStoreRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update store profile
+      tags:
+      - store
+  /admin/vouchers:
+    get:
+      description: Retrieve a list of all active/inactive vouchers (Admin only).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all vouchers
+      tags:
+      - vouchers
+    post:
+      consumes:
+      - application/json
+      description: Create a new discount voucher (Admin only).
+      parameters:
+      - description: Create Voucher Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/voucher.CreateVoucherRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new voucher
+      tags:
+      - vouchers
+  /admin/vouchers/{id}:
+    delete:
+      description: Delete a voucher by its ID (Admin only).
+      parameters:
+      - description: Voucher UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a voucher
+      tags:
+      - vouchers
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate admin and return JWT token.
+      parameters:
+      - description: Login Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login as admin
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new admin account for the POS system.
+      parameters:
+      - description: Register Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new admin
+      tags:
+      - auth
+  /public/categories:
+    get:
+      description: Retrieve a list of all product categories for the public customer
+        menu.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get all categories for public menu
+      tags:
+      - public
+  /public/products:
+    get:
+      description: Retrieve a list of all products for the public customer menu.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get all products for public menu
+      tags:
+      - public
+  /webhook/payment:
+    post:
+      consumes:
+      - application/json
+      description: Receive and process payment notifications from Midtrans (Public).
+      parameters:
+      - description: Webhook Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/payment.WebhookPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Handle Midtrans webhook
+      tags:
+      - public
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer <your-jwt-token>" to authenticate.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

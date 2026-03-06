@@ -13,6 +13,14 @@ func NewPublicCategoryController(service CategoryService) *PublicCategoryControl
 }
 
 
+// GetAllMenu godoc
+// @Summary      Get all categories for public menu
+// @Description  Retrieve a list of all product categories for the public customer menu.
+// @Tags         public
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /public/categories [get]
 func (ctrl *PublicCategoryController) GetAllMenu(c *fiber.Ctx) error {
 
 	categories, err := ctrl.service.GetAllCategories()

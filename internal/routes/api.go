@@ -1,6 +1,7 @@
 package routes
 
 import (
+	_ "go-fiber-pos/docs" // Import generated docs
 	"go-fiber-pos/internal/config"
 	"go-fiber-pos/internal/infrastructure/provider"
 	"go-fiber-pos/internal/middleware"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/swagger"
 )
 
 // SetupRoutes merakit semua dependency dan mendaftarkan endpoint
@@ -26,6 +28,10 @@ func SetupRoutes(app *fiber.App) {
 	midtransAdapter := provider.NewMidtransAdapter()
 
 	api := app.Group("/api")
+
+	// Swagger UI
+	app.Get("/swagger/*", swagger.HandlerDefault) // default
+
 
 	// Route Test Ping
 	api.Get("/ping", func(c *fiber.Ctx) error {

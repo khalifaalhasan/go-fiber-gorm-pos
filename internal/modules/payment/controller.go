@@ -19,6 +19,19 @@ func NewPaymentController(service PaymentService) *PaymentController {
 
 // InitiatePayment membuat link pembayaran untuk sebuah order.
 // Endpoint: POST /admin/payments/initiate
+// InitiatePayment godoc
+// @Summary      Initiate a payment link
+// @Description  Create a Midtrans Snap payment link for an order (Admin only).
+// @Tags         payments
+// @Accept       json
+// @Produce      json
+// @Param        request body InitiatePaymentRequest true "Initiate Payment Request"
+// @Success      201  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Failure      409  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/payments/initiate [post]
 func (ctrl *PaymentController) InitiatePayment(c *fiber.Ctx) error {
 	var req InitiatePaymentRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -49,6 +62,17 @@ func (ctrl *PaymentController) InitiatePayment(c *fiber.Ctx) error {
 // HandleWebhook menerima notifikasi pembayaran dari Midtrans.
 // Endpoint: POST /webhook/payment (PUBLIC — tidak butuh JWT)
 // Selalu return 200 agar Midtrans tidak melakukan retry yang tidak perlu.
+// HandleWebhook godoc
+// @Summary      Handle Midtrans webhook
+// @Description  Receive and process payment notifications from Midtrans (Public).
+// @Tags         public
+// @Accept       json
+// @Produce      json
+// @Param        request body WebhookPayload true "Webhook Payload"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /webhook/payment [post]
 func (ctrl *PaymentController) HandleWebhook(c *fiber.Ctx) error {
 	var payload WebhookPayload
 	if err := c.BodyParser(&payload); err != nil {

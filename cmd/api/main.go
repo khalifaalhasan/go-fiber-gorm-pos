@@ -14,6 +14,26 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// @title Bangga Punya Web - POS API
+// @version 1.0
+// @description API Dokumentasi untuk Sistem POS (Point of Sale) Bangga Punya Web.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /api
+// @query.collection.format multi
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer <your-jwt-token>" to authenticate.
 func main() {
 	// 1. Inisialisasi Logger Custom & Validator
 	logger.InitLogger()

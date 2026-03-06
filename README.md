@@ -1,117 +1,74 @@
-# 🚀 Bangga Punya Web - Backend API
+# 🚀 Bangga Punya Web - POS Backend API
 
-> Production-ready backend service built with **Clean Architecture**
-> principles for a single-tenant business system.
+> **Enterprise-grade POS Backend** built with Golang Fiber, following Clean Architecture principles and high-performance patterns.
 
-------------------------------------------------------------------------
+---
 
-## 🎯 Development Objectives
+## 🎯 Technical Excellence & Features
 
-Proyek ini dikembangkan dengan beberapa tujuan utama:
+Proyek ini tidak hanya sekadar CRUD, melainkan mengimplementasikan standar industri untuk reliabilitas dan skalabilitas:
 
--   **Adopsi Clean Architecture**\
-    Memisahkan logika bisnis (Service) dari akses data (Repository) dan
-    pengiriman data (Controller).
+### 1. 🛡️ Idempotency Handling
+Menjamin bahwa request yang sama (misal: double-click checkout) tidak akan memproses order dua kali.
+- **Distributed Locking**: Menggunakan Redis `SETNX` untuk mengunci proses yang sedang berjalan.
+- **Permanent Caching**: Hasil response sukses disimpan di Database, sehingga jika client mengirim ulang dengan `Idempotency-Key` yang sama, server akan mengembalikan hasil yang sama tanpa membebani logika bisnis.
 
--   **Single-Tenant Focus**\
-    Mengoptimalkan performa dan keamanan data eksklusif untuk satu
-    toko/entitas bisnis.
+### 2. ⚡ N+1 Query Resolution
+Menghindari masalah performa database klasik di mana 1 request menghasilkan puluhan query tambahan.
+- **Eager Loading**: Menggunakan GORM `.Preload()` untuk mengambil relasi (seperti Order Items & Products) dalam satu batch query yang efisien.
 
--   **Automatic Data Integrity**\
-    Implementasi Automatic Slugging (menggunakan GORM Hooks) dan
-    validasi data yang ketat.
+### 3. 🛡️ Safe Concurrency & Deadlock Prevention
+Sistem ini menangani ribuan transaksi bersamaan dengan aman:
+- **Pessimistic Locking**: Menggunakan `SELECT ... FOR UPDATE` untuk menjamin konsistensi stok dan nomor antrean.
+- **Deadlock Avoidance**: Mengimplementasikan **Global Sorting Strategy** pada ID produk sebelum akuisisi lock untuk mencegah circular wait.
 
--   **Developer Experience**\
-    Struktur folder yang modular untuk memudahkan kolaborasi tim di masa
-    depan (Visi Agency Bangga Punya Web).
+### 4. 🐳 Docker Multistage Build
+Optimasi container untuk deployment production:
+- **Build Stage**: Menggunakan image Golang Alpine untuk kompilasi.
+- **Runtime Stage**: Hanya menyertakan binary statis di atas image Alpine murni (~5MB), menghasilkan image yang sangat ringan, aman, dan cepat di-deploy.
 
-------------------------------------------------------------------------
+---
 
 ## 🛠️ Tech Stack
 
--   **Language:** Go (Golang) 1.2x\
--   **Web Framework:** Fiber (Express-like performance for Go)\
--   **ORM:** GORM (PostgreSQL)\
--   **Authentication:** JWT (JSON Web Token)\
--   **Validation:** Go-Playground Validator\
--   **Database:** PostgreSQL
+- **Framework**: [Fiber v2](https://gofiber.io/) (Fastest Go Web Framework)
+- **DB & Cache**: PostgreSQL & Redis
+- **ORM**: GORM
+- **Docs**: Swagger (Swaggo)
+- **Validation**: Go-Validator v10
 
-------------------------------------------------------------------------
+---
 
-## 📂 Project Structure
+## 📖 API Documentation & Testing
 
-    .
-    ├── config/      # Database & Environment configuration
-    ├── controller/  # Delivery layer (HTTP Request & Response)
-    ├── middleware/  # JWT Protection & Security
-    ├── model/       # Domain Entities & Data Contracts (DTO/Interface)
-    ├── repository/  # Data Access Layer (GORM Queries)
-    ├── routes/      # Modular Route Definitions
-    ├── service/     # Business Logic Layer
-    ├── utils/       # Helper functions (JWT, Logger, Validator)
-    └── main.go      # Application Entry Point
+### 🟢 Swagger UI
+Dokumentasi interaktif dapat diakses saat aplikasi berjalan:
+1. Jalankan aplikasi: `go run cmd/api/main.go` atau `docker-compose up`
+2. Buka: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
 
-------------------------------------------------------------------------
+### 🟠 Postman Collection
+Untuk pengujian flow End-to-End yang lebih komprehensif:
+1. Import file `Postman_Collection_EndToEnd.json` ke Postman.
+2. Pastikan environment variable `base_url` mengarah ke `http://localhost:8080`.
+3. Gunakan folder `1. Authentication` untuk mendapatkan token, yang akan otomatis tersimpan untuk request berikutnya.
 
-## 🚀 Key Features
-
--   ✅ Secure Authentication: Register & Login dengan enkripsi Bcrypt\
--   ✅ Category Management: CRUD kategori produk dengan fitur auto-slug\
--   ✅ Product Management: Manajemen menu lengkap dengan sistem promo
-    dan harga normal\
--   ✅ Public API: Endpoint katalog menu khusus untuk pelanggan (SEO
-    Friendly Slugs)\
--   ✅ Request Validation: Validasi input otomatis sebelum masuk ke
-    database
-
-------------------------------------------------------------------------
+---
 
 ## 🏁 Quick Start
 
-### 1️⃣ Clone Repository
-
-``` bash
-git clone <your-repository-url>
-cd <project-folder>
+### 1️⃣ Clone & Run with Docker (Recommended)
+```bash
+docker-compose up -d --build
 ```
 
-### 2️⃣ Setup Environment
+### 2️⃣ Manual Setup
+1. Copy `.env` dan sesuaikan kredensial database.
+2. `go mod tidy`
+3. Generate docs: `swag init -g cmd/api/main.go`
+4. Jalankan: `go run cmd/api/main.go`
 
-Pastikan file `.env` sudah terkonfigurasi:
-
-    DB_HOST=localhost
-    DB_PORT=5432
-    DB_USER=your_user
-    DB_PASS=your_password
-    DB_NAME=your_database
-    JWT_SECRET=your_secret_key
-
-### 3️⃣ Install Dependencies
-
-``` bash
-go mod tidy
-```
-
-### 4️⃣ Run Application
-
-``` bash
-go run main.go
-```
-
-Akses API di:
-
-    http://localhost:8080
-
-------------------------------------------------------------------------
+---
 
 ## ❤️ Author
-
-Dibuat dengan ❤️ di Palembang oleh **Khalifa Al Hasan** 🚀☕
-
-------------------------------------------------------------------------
-
-## 📌 Vision
-
-Backend ini merupakan bagian dari visi besar **Bangga Punya Web
-Agency**\
-untuk membangun sistem yang scalable, secure, dan siap production.
+Dibuat dengan ❤️ oleh **Khalifa Al Hasan** 🚀☕\
+Part of **Bangga Punya Web Agency** Vision.

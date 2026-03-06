@@ -17,6 +17,17 @@ func NewInventoryController(service InventoryService) *InventoryController {
 	return &InventoryController{service: service}
 }
 
+// GetStockByProductID godoc
+// @Summary      Get stock level by product ID
+// @Description  Retrieve the current stock level for a specific product (Admin only).
+// @Tags         inventory
+// @Param        productId  path      string  true  "Product UUID"
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/inventories/{productId} [get]
 func (c *InventoryController) GetStockByProductID(ctx *fiber.Ctx) error {
 	idParam := ctx.Params("productId")
 	productID, err := uuid.Parse(idParam)
@@ -38,6 +49,18 @@ func (c *InventoryController) GetStockByProductID(ctx *fiber.Ctx) error {
 	})
 }
 
+// AdjustStock godoc
+// @Summary      Adjust stock level
+// @Description  Manually adjust the stock level for a specific product (Admin only).
+// @Tags         inventory
+// @Accept       json
+// @Produce      json
+// @Param        request body AdjustStockRequest true "Adjust Stock Request"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      422  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/inventories/adjust [post]
 func (c *InventoryController) AdjustStock(ctx *fiber.Ctx) error {
 	var req AdjustStockRequest
 	if err := ctx.BodyParser(&req); err != nil {
@@ -56,6 +79,17 @@ func (c *InventoryController) AdjustStock(ctx *fiber.Ctx) error {
 	})
 }
 
+// GetMovements godoc
+// @Summary      Get stock movements
+// @Description  Retrieve the stock movement history for a specific product (Admin only).
+// @Tags         inventory
+// @Param        productId  path      string  true  "Product UUID"
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/inventories/{productId}/movements [get]
 func (c *InventoryController) GetMovements(ctx *fiber.Ctx) error {
 	idParam := ctx.Params("productId")
 	productID, err := uuid.Parse(idParam)

@@ -1,8 +1,6 @@
 package product
 
 import (
-
-
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -16,6 +14,14 @@ func NewPublicProductController(service ProductService) *PublicProductController
 }
 
 // 2. Receiver diperbaiki menjadi *PublicProductController
+// GetAllMenu godoc
+// @Summary      Get all products for public menu
+// @Description  Retrieve a list of all products for the public customer menu.
+// @Tags         public
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /public/products [get]
 func (ctrl *PublicProductController) GetAllMenu(c *fiber.Ctx) error {
 	products, err := ctrl.service.GetAllProducts()
 	if err != nil {

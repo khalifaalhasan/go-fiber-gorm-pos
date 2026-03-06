@@ -85,6 +85,45 @@
 			"name": "2. Master Data",
 			"item": [
 				{
+					"name": "2.0 Store Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Kopi Bangga\",\n    \"address\": \"Jl. Merdeka No. 123, Jakarta\",\n    \"phone\": \"081234567890\",\n    \"markup_fee\": 2000\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/stores/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"stores",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "2.1 Create Category",
 					"event": [
 						{
@@ -183,6 +222,44 @@
 								"api",
 								"admin",
 								"products"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2.3 Create Voucher",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"DISKON10\",\n    \"discount_amount\": 5000,\n    \"min_order_amount\": 20000,\n    \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/vouchers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"vouchers"
 							]
 						}
 					},
@@ -334,7 +411,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"order_source\": \"CASHIER\",\n    \"table_number\": \"Meja 01\",\n    \"voucher_code\": \"\",\n    \"items\": [\n        {\n            \"product_id\": \"{{product_id}}\",\n            \"qty\": 2,\n            \"notes\": \"Less sugar, esnya dipisah ya\"\n        }\n    ]\n}"
+							"raw": "{\n    \"order_source\": \"CASHIER\",\n    \"table_number\": \"Meja 01\",\n    \"voucher_code\": \"DISKON10\",\n    \"items\": [\n        {\n            \"product_id\": \"{{product_id}}\",\n            \"qty\": 2,\n            \"notes\": \"Less sugar, esnya dipisah ya\"\n        }\n    ]\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/admin/orders/checkout",
@@ -376,6 +453,73 @@
 								"admin",
 								"orders",
 								"{{order_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.3 Initiate Payment",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"order_id\": \"{{order_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/payments/initiate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"payments",
+								"initiate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4.4 Midtrans Webhook (Simulated)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"order_id\": \"{{order_id}}\",\n    \"transaction_status\": \"settlement\",\n    \"payment_type\": \"bank_transfer\",\n    \"signature_key\": \"dummy_signature_will_fail_in_prod\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/webhook/payment",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"webhook",
+								"payment"
 							]
 						}
 					},

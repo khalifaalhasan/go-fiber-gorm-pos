@@ -18,6 +18,19 @@ func NewVoucherController(service VoucherService) *VoucherController {
 	return &VoucherController{service: service}
 }
 
+// Create godoc
+// @Summary      Create a new voucher
+// @Description  Create a new discount voucher (Admin only).
+// @Tags         vouchers
+// @Accept       json
+// @Produce      json
+// @Param        request body CreateVoucherRequest true "Create Voucher Request"
+// @Success      201  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      409  {object}  map[string]interface{}
+// @Failure      422  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/vouchers [post]
 func (ctrl *VoucherController) Create(c *fiber.Ctx) error {
 	var req CreateVoucherRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -44,6 +57,15 @@ func (ctrl *VoucherController) Create(c *fiber.Ctx) error {
 	})
 }
 
+// GetAll godoc
+// @Summary      Get all vouchers
+// @Description  Retrieve a list of all active/inactive vouchers (Admin only).
+// @Tags         vouchers
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/vouchers [get]
 func (ctrl *VoucherController) GetAll(c *fiber.Ctx) error {
 	vouchers, err := ctrl.service.GetAllVouchers()
 	if err != nil {
@@ -52,6 +74,17 @@ func (ctrl *VoucherController) GetAll(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"data": vouchers})
 }
 
+// Delete godoc
+// @Summary      Delete a voucher
+// @Description  Delete a voucher by its ID (Admin only).
+// @Tags         vouchers
+// @Param        id   path      string  true  "Voucher UUID"
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/vouchers/{id} [delete]
 func (ctrl *VoucherController) Delete(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {

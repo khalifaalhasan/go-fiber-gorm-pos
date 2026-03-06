@@ -34,29 +34,42 @@ func NewMidtransAdapter() *MidtransAdapter {
 // CreatePaymentLink membuat link pembayaran baru di Midtrans Snap.
 // Mengembalikan: snap_url (untuk redirect user), transaction_id (sebagai idempotency key), error.
 func (m *MidtransAdapter) CreatePaymentLink(order *core.Order) (paymentURL string, transactionID string, err error) {
-	var snapClient snap.Client
-	env := midtrans.Sandbox
-	if m.IsProduction {
-		env = midtrans.Production
-	}
-	snapClient.New(m.ServerKey, env)
+    var snapClient snap.Client
+    env := midtrans.Sandbox
+    if m.IsProduction {
+        env = midtrans.Production
+    }
+    // Ganti ServerKey dengan API key Midtrans kamu (sebaiknya diambil dari os.Getenv)
+    snapClient.New(m.ServerKey, env) 
 
-	// Agar pembayaran bisa di-generate ulang untuk pesanan yang sama, gunakan timestamp
-	transactionID = fmt.Sprintf("%s-%d", order.ID.String(), time.Now().Unix())
+    // Agar pembayaran bisa di-generate ulang untuk pesanan yang sama, gunakan timestamp
+    transactionID = fmt.Sprintf("%s-%d", order.ID.String(), time.Now().Unix())
 
-	req := &snap.Request{
-		TransactionDetails: midtrans.TransactionDetails{
-			OrderID:  transactionID,
-			GrossAmt: int64(order.TotalFinalAmount),
-		},
-	}
+    req := &snap.Request{
+        TransactionDetails: midtrans.TransactionDetails{
+            OrderID:  transactionID,
+            GrossAmt: int64(order.TotalFinalAmount),
+        },
+    }
 
-	snapResp, err := snapClient.CreateTransaction(req)
-	if err != nil {
-		return "", "", fmt.Errorf("gagal membuat transaksi midtrans: %w", err)
-	}
+    snapResp, midtransErr := snapClient.CreateTransaction(req)
+    
+    // PENGECEKAN AMAN:
+    // Jika snapResp tidak nil dan punya Token/RedirectURL, berarti SUKSES!
+    if snapResp != nil && snapResp.RedirectURL != "" {
+        return snapResp.RedirectURL, transactionID, nil
+    }
 
-	return snapResp.RedirectURL, transactionID, nil
+    // Jika sampai sini, berarti benar-benar gagal.
+    // Tangkap pesan error dari Midtrans jika ada
+    var errMsg string
+    if midtransErr != nil {
+        errMsg = midtransErr.Message
+    } else {
+        errMsg = "Unknown Midtrans Error"
+    }
+
+    return "", "", fmt.Errorf("gagal membuat transaksi midtrans: %s", errMsg)
 }
 
 // VerifySignature memvalidasi bahwa webhook benar-benar dikirim oleh Midtrans.

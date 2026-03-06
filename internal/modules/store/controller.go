@@ -19,6 +19,16 @@ func NewStoreController(service StoreService, v *validator.Validate) *StoreContr
 	return &StoreController{service: service, v: v}
 }
 
+// GetProfile godoc
+// @Summary      Get store profile
+// @Description  Retrieve the store profile information (Admin only).
+// @Tags         store
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/stores/profile [get]
 func (ctrl *StoreController) GetProfile(c *fiber.Ctx) error {
 	profile, err := ctrl.service.GetProfile()
 	if err != nil {
@@ -32,6 +42,18 @@ func (ctrl *StoreController) GetProfile(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"data": profile})
 }
 
+// UpdateProfile godoc
+// @Summary      Update store profile
+// @Description  Update the store profile information (Admin only).
+// @Tags         store
+// @Accept       json
+// @Produce      json
+// @Param        request body UpdateStoreRequest true "Update Store Request"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      422  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/stores/profile [put]
 func (ctrl *StoreController) UpdateProfile(c *fiber.Ctx) error {
 	var req UpdateStoreRequest
 	if err := c.BodyParser(&req); err != nil {

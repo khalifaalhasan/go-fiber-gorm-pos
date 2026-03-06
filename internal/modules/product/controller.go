@@ -12,6 +12,17 @@ func NewProductController(service ProductService) *ProductController {
 	return &ProductController{service: service}
 }
 
+// Create godoc
+// @Summary      Create a new product
+// @Description  Create a new product with details (Admin only).
+// @Tags         products
+// @Accept       json
+// @Produce      json
+// @Param        request body CreateProductRequest true "Create Product Request"
+// @Success      201  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/products [post]
 func (ctrl *ProductController) Create(c *fiber.Ctx) error {
 
 	var req CreateProductRequest
@@ -30,6 +41,15 @@ func (ctrl *ProductController) Create(c *fiber.Ctx) error {
 	})
 }
 
+// GetAll godoc
+// @Summary      Get all products
+// @Description  Retrieve a list of all products (Admin only).
+// @Tags         products
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/products [get]
 func (ctrl *ProductController) GetAll(c *fiber.Ctx) error {
 	
 	products, err := ctrl.service.GetAllProducts()

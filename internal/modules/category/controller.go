@@ -12,6 +12,17 @@ func NewCategoryController(service CategoryService) *CategoryController {
 	return &CategoryController{service: service}
 }
 
+// Create godoc
+// @Summary      Create a new category
+// @Description  Create a new category for products (Admin only).
+// @Tags         categories
+// @Accept       json
+// @Produce      json
+// @Param        request body CreateCategoryRequest true "Create Category Request"
+// @Success      201  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/categories [post]
 func (ctrl *CategoryController) Create(c *fiber.Ctx) error {
 	var req CreateCategoryRequest
 	if err := c.BodyParser(&req); err != nil{
@@ -30,6 +41,15 @@ func (ctrl *CategoryController) Create(c *fiber.Ctx) error {
 }
 
 
+// GetAll godoc
+// @Summary      Get all categories
+// @Description  Retrieve a list of all product categories (Admin only).
+// @Tags         categories
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/categories [get]
 func (ctrl *CategoryController) GetAll(c *fiber.Ctx) error {
 	// Panggil service (Bersih tanpa storeIDContext)
 	categories, err := ctrl.service.GetAllCategories()
